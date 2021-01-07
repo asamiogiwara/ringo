@@ -1,64 +1,145 @@
-/*Example experiment for the ComicCaption controller.
-Preload images using Alex Drummond's Preloader controller for better performance, as shown below.*/
+PennController.DebugOff()
 
-//List of images to be used in items
-p1 = "https://i.imgur.com/G44f7Sf.jpg";
-p2 = "https://i.imgur.com/4QqJgx4.jpg";
-p3 = "https://imgur.com/a/qd4upEo";
-p4 = "https://imgur.com/a/YIOFS4l";
+PennController.ResetPrefix(null); // Initiates PennController
 
-var IMAGES_TO_PRELOAD = [p1],[p2],[p3],[p4]; //array of images to be preloaded
+// Start typing your code here
 
-var items = [
+Sequence("intro", "preload", shuffle("target", "filler"), "send", "final" )
 
-["preload", "Preloader", {images: IMAGES_TO_PRELOAD}],
+newTrial( "intro" ,
+    defaultText
+        .print()
+    ,
+    newText("<p>この実験では，画像の後に呈示される単語が実際にある単語かどうかをできるだけ早く判断していただきます。</p>")
+    ,
+    newText("<p>実際にある単語だと思ったら「F」のキーを，実際にはない単語だと思ったら「J」のキーを押してください。</p>")
+    ,
+    newText("<p>IDを入力してから，下にあるStartボタンを押してください，</p>")
+    ,
+    newTextInput("inputID")
+        .print()
+    ,
+    newButton("Start")
+        .print()
+        .wait()
+    ,
+    newVar("ID")
+        .global()
+        .set( getTextInput("inputID") )
+)
+.log( "ID" , getVar("ID") )
 
- ["intro", "Message", {consentRequired: false,
-                html: ["div",
-                        ["p", "Welcome to the experiment!"]
-                      ]}],
+// トライアルが始まる前に画像などの実験材料をロード
+CheckPreloaded("target", "filler")
+    .label( "preload" );
+
+// newTrial( "welcome" ,
+//     newText( "message" , "Welcome. The resources are currently being preloaded. The next trial won't start before all the resources for the 'practice' trial are loaded (i.e. 1fishSquareTank.png).")
+//         .print()
+//     ,
+//     newButton("start", "Start")
+//         .print()
+//         .wait()
+// );
+
+// ターゲット用のテンプレート
+Template("target.csv", variable =>
+  newTrial( "target" ,
+    newTimer(1000) // いきなり次の画像が呈示されないように1秒間の空白を作っています。
+        .start()
+        .wait()
+    ,
+    newImage("picture", variable.Picture)
+        .print()
+    ,
+    newTimer(500) // 画像の呈示時間を設定しています。ここでは0.5秒間です。
+        .start()
+        .wait()
+    ,
+    getImage("picture")
+        .remove() // このコマンドで画像を取り除かないと，ずっと画像が呈示されてしまう。
+    ,
+    newText("word", variable.Word)
+        .settings.css("font-size", "50px") // フォントサイズを設定しています。
+        .bold()
+    ,
+    newText("left", "Yes") // 語彙判断用の選択肢です。
+        .settings.css("font-size", "30px")
+    ,
+    newText("right", "No") // 語彙判断用のもう一つの選択肢です。
+        .settings.css("font-size", "30px")
+    ,
+    newCanvas(600,600)
+        .add("center at 50%", "middle at 50%", getText("word") )
+        .add("left at 25%", "bottom at 80%", getText("left"))
+        .add("right at 75%", "bottom at 80%", getText("right"))
+        .print()
+        .log() // 単語が呈示されたタイミングを記録しています。
+    ,
+    newKey("FJ")
+        .wait()
+        .log() // どちらかの選択肢が選ばれたタイミングを記録しています。
+    )
+  .log( "ID"     , getVar("ID")    )
+  .log( "Item"   , variable.Item   )
+  .log( "Condition" , variable.Condition )
+  .log( "Group"  , variable.Group  )
+)
+
+// ターゲットとフィラーを疑似ランダム化するために，フィラー用のテンプレートを別に作ります。
+Template("fillers.csv", variable =>
+  newTrial( "filler" ,
+    newTimer(1000)
+        .start()
+        .wait()
+    ,
+    newImage("picture", variable.Picture)
+        .print()
+    ,
+    newTimer(500)
+        .start()
+        .wait()
+    ,
+    getImage("picture")
+        .remove()
+    ,
+    newText("word", variable.Word)
+        .settings.css("font-size", "50px")
+        .bold()
+    ,
+    newText("left", "Yes")
+        .settings.css("font-size", "30px")
+    ,
+    newText("right", "No")
+        .settings.css("font-size", "30px")
+    ,
+    newCanvas(600,600)
+        .add("center at 50%", "middle at 50%", getText("word") )
+        .add("left at 25%", "bottom at 80%", getText("left"))
+        .add("right at 75%", "bottom at 80%", getText("right"))
+        .print()
+        .log()
+    ,
+    newKey("FJ")
+        .wait()
+        .log()
+    )
+  .log( "ID"     , getVar("ID")    )
+  .log( "Item"   , variable.Item   )
+  .log( "Condition" , variable.Condition )
+)
 
 
-["sep", "Separator", {}],
+// 結果の送信と最終画面
+SendResults( "send" )
 
-//Practice items
-	["practice", "ComicCaption", ,{s: {html: "<big> アーニーはバートよりたくさん入れた．"}, q: "質問：この文は上の絵の状況と合っていますか？", html: p3}],
-    ["practice", "ComicCaption", {s: {html: "<big> アーニーはバートよりたくさん収穫した．"}, q: "質問：この文は上の絵の状況と合っていますか？", html: p4}],
-
-
-/// Stimuli go below here.
-
-["fill","ComicCaption",{s: {html: "<big> ここに　ねこが　います．"}, q: "質問：この文は上の絵の状況と合っていますか？", html: p1}], //supply link to image as html option
-["fill","ComicCaption",{s: {html: "<big> この人は　独裁者です．"}, q: "質問：この文は上の絵の状況と合っていますか？", html: p2}], //supply link to image as html option
-
-
-
-
-["end", "Message", {transfer: 2000,
-                html: ["div",
-                        ["p", "All done!"]
-                      ]}],
-];
-
-//Define sequence of experiment; preload must be first
-var shuffleSequence = seq("preload","intro", "practice", sepWith("sep", seq(rshuffle("i","fill"))), "end");
-
-//これは4ゼミのshuffle 
-//var shuffleSequence = seq("intro", "intro2", "intro3", "postpractice", "setcounter",seq(rshuffle(anyOf("ea", "eb", "ec", "ed", "ee", "ef"), "filler")));
-var showProgressBar = true;
-
-var defaults = [
-    "Separator", {
-        transfer: 1000,
-        normalMessage: "",
-        errorMessage: "Wrong. Please wait for the next trial.",
-        ignoreFailure: true
-    },
-    "ComicCaption", { //Options for ComicCaption items
-        as: ["〇", "×"],
-        presentAsScale: true,
-        instructions: "「〇」か「×」をクリックしてください。",
-        leftComment: "合っている",
-        rightComment: "合っていない"
-    }
-];
+newTrial( "final" ,
+    newText("<p>実験は以上で終了です。ありがとうございました。</p>")
+        .print()
+    ,
+    newText("<p><a href='https://www.pcibex.net/' href='_blank'>ここをクリックして実験を終了してください。</a></p>")
+        .print()
+    ,
+    newButton("void")
+        .wait()
+)
